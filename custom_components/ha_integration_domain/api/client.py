@@ -1,11 +1,7 @@
 """
-API Client for ha_integration_domain.
+API Client for hoboken_path.
 
-This module provides the API client for communicating with external services.
-It demonstrates proper error handling, authentication patterns, and async operations.
-
-For more information on creating API clients:
-https://developers.home-assistant.io/docs/api_lib_index
+This module provides the API client for communicating with the PATH train API.
 """
 
 from __future__ import annotations
@@ -16,222 +12,134 @@ from typing import Any
 
 import aiohttp
 
+from ..const import API_ENDPOINT, API_TIMEOUT
 
-class IntegrationBlueprintApiClientError(Exception):
+
+class PathApiClientError(Exception):
     """Base exception to indicate a general API error."""
 
 
-class IntegrationBlueprintApiClientCommunicationError(
-    IntegrationBlueprintApiClientError,
+class PathApiClientCommunicationError(
+    PathApiClientError,
 ):
     """Exception to indicate a communication error with the API."""
 
 
-class IntegrationBlueprintApiClientAuthenticationError(
-    IntegrationBlueprintApiClientError,
-):
-    """Exception to indicate an authentication error with the API."""
-
-
-def _verify_response_or_raise(response: aiohttp.ClientResponse) -> None:
+class PathApiClient:
     """
-    Verify that the API response is valid.
+    API Client for PATH train data.
 
-    Raises appropriate exceptions for authentication and HTTP errors.
-
-    Args:
-        response: The aiohttp ClientResponse to verify.
-
-    Raises:
-        IntegrationBlueprintApiClientAuthenticationError: For 401/403 errors.
-        aiohttp.ClientResponseError: For other HTTP errors.
-
-    """
-    if response.status in (401, 403):
-        msg = "Invalid credentials"
-        raise IntegrationBlueprintApiClientAuthenticationError(
-            msg,
-        )
-    response.raise_for_status()
-
-
-class IntegrationBlueprintApiClient:
-    """
-    API Client for Smart Air Purifier integration.
-
-    This client demonstrates authentication and API communication patterns
-    for Home Assistant integrations. It handles HTTP requests, error handling,
-    and credential management.
-
-    The username and password are stored and would be used for:
-    - HTTP Basic Auth headers
-    - OAuth token exchange
-    - API key generation
-    - Session token management
-
-    Note: JSONPlaceholder is used as a demo endpoint and doesn't require auth.
-    In production, replace with your actual API endpoint that validates credentials.
-
-    For more information on API clients:
-    https://developers.home-assistant.io/docs/api_lib_index
+    This client fetches real-time train arrival information from the
+    Port Authority of NY & NJ PATH API.
 
     Attributes:
-        _username: The username for API authentication.
-        _password: The password for API authentication.
         _session: The aiohttp ClientSession for making requests.
+        _station_filter: Optional list of station codes to filter results.
 
     """
 
     def __init__(
         self,
-        username: str,
-        password: str,
         session: aiohttp.ClientSession,
+        station_filter: list[str] | None = None,
     ) -> None:
         """
-        Initialize the API Client with credentials.
+        Initialize the API Client.
 
         Args:
-            username: The username for authentication from config flow.
-            password: The password for authentication from config flow.
             session: The aiohttp ClientSession to use for requests.
+            station_filter: Optional list of station codes to monitor (e.g., ["HOB", "JSQ"]).
 
         """
-        self._username = username
-        self._password = password
         self._session = session
+        self._station_filter = station_filter
 
-    async def async_get_data(self) -> Any:
+    async def async_get_data(self) -> dict[str, Any]:
         """
-        Get data from the API.
-
-        This method fetches the current state and sensor data from the device.
-        It demonstrates where credentials would be used in production:
-        - Authorization headers (Basic Auth, Bearer Token)
-        - Query parameters (username, api_key)
-        - Session cookies (after login)
+        Get train arrival data from the PATH API.
 
         Returns:
-            A dictionary containing the device data.
+            A dictionary with station codes as keys and arrival data as values.
+            Example structure:
+            {
+                "HOB": {
+                    "station_name": "Hoboken",
+                    "directions": {
+                        "ToNY": [
+                            {
+                                "target": "33S",
+                                "seconds_to_arrival": 120,
+                                "arrival_message": "2 min",
+                                "line_color": "FF9900",
+                                "head_sign": "33rd Street",
+                                "last_updated": "2025-12-30T..."
+                            }
+                        ]
+                    }
+                }
+            }
 
         Raises:
-            IntegrationBlueprintApiClientAuthenticationError: If authentication fails.
-            IntegrationBlueprintApiClientCommunicationError: If communication fails.
-            IntegrationBlueprintApiClientError: For other API errors.
-
-        """
-        # In production: Use username/password for authentication
-        # Example patterns:
-        # 1. Basic Auth: auth=aiohttp.BasicAuth(self._username, self._password)
-        # 2. Token: headers={"Authorization": f"Bearer {self._get_token()}"}
-        # 3. API Key: params={"username": self._username, "key": self._password}
-
-        return await self._api_wrapper(
-            method="get",
-            url="https://jsonplaceholder.typicode.com/posts/1",
-            # For demo purposes with JSONPlaceholder (no auth required)
-            # In production, add authentication here
-        )
-
-    async def async_set_fan_speed(self, speed: str) -> Any:
-        """
-        Set the fan speed on the device.
-
-        Args:
-            speed: The fan speed to set (low, medium, high, auto).
-
-        Returns:
-            A dictionary containing the API response.
-
-        Raises:
-            IntegrationBlueprintApiClientAuthenticationError: If authentication fails.
-            IntegrationBlueprintApiClientCommunicationError: If communication fails.
-            IntegrationBlueprintApiClientError: For other API errors.
-
-        """
-        # In production: Send authenticated request to change fan speed
-        return await self._api_wrapper(
-            method="patch",
-            url="https://jsonplaceholder.typicode.com/posts/1",
-            data={"fan_speed": speed, "user": self._username},
-            headers={"Content-type": "application/json; charset=UTF-8"},
-        )
-
-    async def async_set_target_humidity(self, humidity: int) -> Any:
-        """
-        Set the target humidity on the device.
-
-        Args:
-            humidity: The target humidity percentage (30-80).
-
-        Returns:
-            A dictionary containing the API response.
-
-        Raises:
-            IntegrationBlueprintApiClientAuthenticationError: If authentication fails.
-            IntegrationBlueprintApiClientCommunicationError: If communication fails.
-            IntegrationBlueprintApiClientError: For other API errors.
-
-        """
-        # In production: Send authenticated request to change humidity setting
-        return await self._api_wrapper(
-            method="patch",
-            url="https://jsonplaceholder.typicode.com/posts/1",
-            data={"target_humidity": humidity, "user": self._username},
-            headers={"Content-type": "application/json; charset=UTF-8"},
-        )
-
-    async def _api_wrapper(
-        self,
-        method: str,
-        url: str,
-        data: dict | None = None,
-        headers: dict | None = None,
-    ) -> Any:
-        """
-        Wrapper for API requests with error handling.
-
-        This method handles all HTTP requests and translates exceptions
-        into integration-specific exceptions.
-
-        Args:
-            method: The HTTP method (get, post, patch, etc.).
-            url: The URL to request.
-            data: Optional data to send in the request body.
-            headers: Optional headers to include in the request.
-
-        Returns:
-            The JSON response from the API.
-
-        Raises:
-            IntegrationBlueprintApiClientAuthenticationError: If authentication fails.
-            IntegrationBlueprintApiClientCommunicationError: If communication fails.
-            IntegrationBlueprintApiClientError: For other API errors.
+            PathApiClientCommunicationError: If communication fails.
+            PathApiClientError: For other API errors.
 
         """
         try:
-            async with asyncio.timeout(10):
-                response = await self._session.request(
-                    method=method,
-                    url=url,
-                    headers=headers,
-                    json=data,
-                )
-                _verify_response_or_raise(response)
-                return await response.json()
+            async with asyncio.timeout(API_TIMEOUT):
+                response = await self._session.get(API_ENDPOINT)
+                response.raise_for_status()
+                data = await response.json()
+
+                # Process the results
+                processed_data: dict[str, Any] = {}
+
+                for station_data in data.get("results", []):
+                    station_code = station_data.get("consideredStation")
+
+                    # Filter by station if specified
+                    if self._station_filter and station_code not in self._station_filter:
+                        continue
+
+                    # Process destinations and messages
+                    directions: dict[str, list[dict[str, Any]]] = {}
+                    for destination in station_data.get("destinations", []):
+                        direction_label = destination.get("label")
+
+                        messages = [
+                            {
+                                "target": msg.get("target"),
+                                "seconds_to_arrival": int(msg.get("secondsToArrival", 0)),
+                                "arrival_message": msg.get("arrivalTimeMessage"),
+                                "line_color": msg.get("lineColor"),
+                                "head_sign": msg.get("headSign"),
+                                "last_updated": msg.get("lastUpdated"),
+                            }
+                            for msg in destination.get("messages", [])
+                        ]
+
+                        if messages:
+                            directions[direction_label] = messages
+
+                    if directions:
+                        processed_data[station_code] = {
+                            "station_code": station_code,
+                            "directions": directions,
+                        }
+
+                return processed_data
 
         except TimeoutError as exception:
-            msg = f"Timeout error fetching information - {exception}"
-            raise IntegrationBlueprintApiClientCommunicationError(
+            msg = f"Timeout error fetching PATH train data - {exception}"
+            raise PathApiClientCommunicationError(
                 msg,
             ) from exception
         except (aiohttp.ClientError, socket.gaierror) as exception:
-            msg = f"Error fetching information - {exception}"
-            raise IntegrationBlueprintApiClientCommunicationError(
+            msg = f"Error fetching PATH train data - {exception}"
+            raise PathApiClientCommunicationError(
                 msg,
             ) from exception
         except Exception as exception:
-            msg = f"Something really wrong happened! - {exception}"
-            raise IntegrationBlueprintApiClientError(
+            msg = f"Unexpected error processing PATH data - {exception}"
+            raise PathApiClientError(
                 msg,
             ) from exception

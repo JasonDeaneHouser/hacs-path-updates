@@ -1,15 +1,9 @@
-"""API package for ha_integration_domain."""
+"""API package for hoboken_path."""
 
-from .client import (
-    IntegrationBlueprintApiClient,
-    IntegrationBlueprintApiClientAuthenticationError,
-    IntegrationBlueprintApiClientCommunicationError,
-    IntegrationBlueprintApiClientError,
-)
+from .client import PathApiClient, PathApiClientCommunicationError, PathApiClientError
 
 __all__ = [
-    "IntegrationBlueprintApiClient",
-    "IntegrationBlueprintApiClientAuthenticationError",
-    "IntegrationBlueprintApiClientCommunicationError",
-    "IntegrationBlueprintApiClientError",
+    "PathApiClient",
+    "PathApiClientCommunicationError",
+    "PathApiClientError",
 ]

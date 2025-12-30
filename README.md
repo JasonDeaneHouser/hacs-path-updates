@@ -1,102 +1,105 @@
-# Home Assistant Integration Blueprint
+# Hoboken PATH Trains
 
 [![Home Assistant](https://img.shields.io/badge/Home%20Assistant-2025.11%2B-blue.svg)](https://www.home-assistant.io/)
-[![Python](https://img.shields.io/badge/python-3.13%2B-blue.svg)](https://www.python.org/)
-[![AI Agent Ready](https://img.shields.io/badge/AI%20Agent-Ready-purple.svg)](#ai-agent-support)
+[![hacs_badge](https://img.shields.io/badge/HACS-Custom-orange.svg)](https://github.com/hacs/integration)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 
-A modern blueprint for creating Home Assistant custom integrations, based on [ludeeus/integration_blueprint](https://github.com/ludeeus/integration_blueprint) but closely aligned with **Home Assistant Core development practices**.
+A Home Assistant custom integration that provides real-time PATH train arrival information for Hoboken and other PATH stations.
 
-This blueprint is designed to work with **Home Assistant 2025.7+** and includes all the patterns and tooling you need to build a professional integration without reinventing the wheel.
+## Features
 
-## 📋 Quick Navigation
+- 🚂 Real-time train arrival data from Port Authority of NY & NJ
+- 📍 Sensors organized by destination station
+- ⏱️ Shows next train arrival times with countdown
+- 🔄 Updates every 15 seconds
+- 🎯 Clean sensor structure: see all trains going to each destination
 
-- **[Getting Started](#getting-started---creating-your-integration)** - Create your integration in minutes
-- **[Development Guide](#development-guide)** - Scripts, tasks, and workflow
-- **[Architecture](#architecture--code-structure)** - Project structure and packages
-- **[Integration Features](#integration-features)** - Config flow, coordinator, entities, and more
-- **[Resources & Support](#resources--support)** - Documentation, tools, and community
+## Installation
 
----
+### HACS (Recommended)
 
-## Getting Started - Creating Your Integration
+1. Open HACS in Home Assistant
+2. Click the three dots in the top right corner
+3. Select "Custom repositories"
+4. Add this repository: `https://github.com/JasonDeaneHouser/hacs-path-updates`
+5. Category: Integration
+6. Click "Add"
+7. Search for "Hoboken PATH Trains" in HACS
+8. Click "Download"
+9. Restart Home Assistant
 
-Ready to create your own Home Assistant integration? **First, create your own repository from this template**, then choose one of two development options:
+### Manual Installation
 
-- **Option 1: GitHub Codespaces** ☁️ - Develop in the cloud (browser-based, zero install, recommended for beginners)
-- **Option 2: Local DevContainer** 💻 - Develop on your machine (requires Docker + VS Code)
+1. Download the latest release
+2. Copy the `custom_components/hoboken_path` folder to your Home Assistant `custom_components` directory
+3. Restart Home Assistant
 
-Both options use the same DevContainer setup, so your code and workflow are identical!
+## Configuration
 
-### Step 0: Create Your Repository First! 🎯
+1. Go to **Settings** → **Devices & Services**
+2. Click **+ Add Integration**
+3. Search for **Hoboken PATH Trains**
+4. Follow the configuration steps
 
-**Before you start developing**, create your own repository:
+## Sensor Structure
 
-1. Click the **"Use this template"** button at the top of this page
-2. Choose a name for your integration repository (e.g., `hass-my-awesome-device`)
-3. Click **"Create repository"**
+The integration creates sensors organized by **destination**. Each sensor shows when the next trains are arriving to that specific destination.
 
-**🤖 Optional: Initialize with Copilot Coding Agent**
+### Example Sensors
 
-After clicking "Create repository", GitHub may offer an optional prompt field for **[Copilot Coding Agent](https://github.com/copilot/agents)**. You can use this to automatically initialize your integration (500 character limit):
+For each PATH station, you'll get sensors like:
+- `sensor.newark_to_world_trade_center` - Next trains to World Trade Center
+- `sensor.newark_to_33rd_street` - Next trains to 33rd Street
+- `sensor.newark_to_hoboken` - Next trains to Hoboken
 
-```markdown
-Run ./initialize.sh with: --domain <domain> --title "<Title>" --namespace "<Prefix>" --repo <owner/repo> --author "<Name>" --force
+### Sensor State
 
-Replace:
-- <domain>: lowercase_with_underscores
-- <Title>: Your Integration Name
-- <Prefix>: YourCamelCase (optional)
-- <owner/repo>: github_user/repo_name
-- <Name>: Your Name
+The sensor state shows the **next train's arrival time** (e.g., "2 min", "5 min", "Arriving")
 
-Verify: custom_components/<domain>/ exists, manifest.json correct, README.md updated. Create PR if successful. The script deletes itself after completion.
-```
+### Sensor Attributes
 
-**Example:** `--domain my_device --title "My Device" --repo user/hacs-my-device --author "John Doe" --force`
+Each sensor provides detailed information:
 
-The agent uses `AGENTS.md` and `.github/copilot-instructions.md` for guidance and runs `./script/check` for validation.
+- `station` - Current station name (e.g., "Newark")
+- `destination` - Where trains are heading (e.g., "World Trade Center")
+- `train_count` - Number of upcoming trains (up to 4)
+- `train_1_arrival` through `train_4_arrival` - Arrival times for each train
+- `train_1_minutes` through `train_4_minutes` - Minutes until arrival
+- `train_1_color` through `train_4_color` - LINE color codes
+- `all_arrivals` - Comma-separated list of all arrival times
+- `arrival_list` - Formatted numbered list of arrivals
 
-**Manual initialization?** Continue with Option 1 or Option 2 below.
+## Supported Stations
 
-### Option 1: GitHub Codespaces (Recommended for Beginners) ☁️
+- Newark (NWK)
+- Harrison (HAR)
+- Journal Square (JSQ)
+- Grove Street (GRV)
+- Newport (NEW)
+- Exchange Place (EXP)
+- World Trade Center (WTC)
+- Christopher Street (CHR)
+- 9th Street (09S)
+- 14th Street (14S)
+- 23rd Street (23S)
+- 33rd Street (33S)
+- Hoboken (HOB)
 
-Develop directly in your browser without installing anything locally!
+## API Source
 
-1. In **your new repository** (created in Step 0), click the green **"Code"** button
-2. Switch to the **"Codespaces"** tab
-3. Click **"Create codespace on main"**
-4. **Wait for setup** (2-3 minutes first time) - everything installs automatically
-5. **Run `./initialize.sh`** in the terminal to configure your integration
-6. **Follow the prompts** to customize:
-   - **Domain**: Your integration's unique identifier (e.g., `my_awesome_device`)
-   - **Title**: Display name (e.g., "My Awesome Device")
-   - **Repository**: Your GitHub repo (e.g., `yourusername/your-repo`)
-   - **Author**: Your name for the LICENSE
+This integration uses the official Port Authority of NY & NJ PATH API:
+`https://www.panynj.gov/bin/portauthority/ridepath.json`
 
-7. **Review and commit** your changes in the Source Control panel (`Ctrl+Shift+G`)
+No authentication required. Data updates every 15 seconds.
 
-**That's it!** You're developing in a fully configured environment with Home Assistant, Python 3.13, and all tools ready. No local setup needed!
+## Support
 
-> 💡 **Pro tip:** Codespaces gives you 60 hours/month free for personal accounts. Perfect for integration development!
->
-> 🌐 **Port forwarding:** When you start Home Assistant (`script/develop`), port 8123 will automatically forward and you'll get a notification with the URL.
->
-> 🧹 **Auto-cleanup:** After initialization completes, the setup script removes itself automatically.
->
-> 📖 **More details:** See [Codespaces Development Guide](docs/development/CODESPACES.md) for tips, troubleshooting, and differences from local development.
+- Report issues: [GitHub Issues](https://github.com/JasonDeaneHouser/hacs-path-updates/issues)
+- Repository: [GitHub](https://github.com/JasonDeaneHouser/hacs-path-updates)
 
-### Option 2: Local Development with VS Code
+## License
 
-If you prefer working on your local machine (requires Docker + VS Code):
-
-#### Prerequisites
-
-You'll need these installed locally:
-
-- **Docker Desktop** (or compatible Docker engine)
-- **VS Code** with the [Dev Containers extension](https://marketplace.visualstudio.com/items?itemName=ms-vscode-remote.remote-containers)
-- **Git**
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
 #### Setup Steps
 

@@ -1,40 +1,27 @@
-"""Diagnostics support for ha_integration_domain.
-
-Learn more about diagnostics:
-https://developers.home-assistant.io/docs/core/integration_diagnostics
-"""
+"""Diagnostics support for hoboken_path."""
 
 from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any
 
-from homeassistant.const import CONF_PASSWORD, CONF_USERNAME
 from homeassistant.helpers import device_registry as dr, entity_registry as er
 from homeassistant.helpers.redact import async_redact_data
 
 if TYPE_CHECKING:
     from homeassistant.core import HomeAssistant
 
-    from .data import IntegrationBlueprintConfigEntry
+    from .data import PathConfigEntry
 
-# Fields to redact from diagnostics - CRITICAL for security!
-TO_REDACT = {
-    CONF_PASSWORD,
-    CONF_USERNAME,
-    "username",
-    "password",
-    "api_key",
-    "token",
-}
+# Fields to redact from diagnostics
+TO_REDACT: set[str] = set()  # No credentials to redact for PATH API
 
 
 async def async_get_config_entry_diagnostics(
     hass: HomeAssistant,
-    entry: IntegrationBlueprintConfigEntry,
+    entry: PathConfigEntry,
 ) -> dict[str, Any]:
     """Return diagnostics for a config entry."""
     coordinator = entry.runtime_data.coordinator
-    client = entry.runtime_data.client
     integration = entry.runtime_data.integration
 
     # Get device and entity information
@@ -74,10 +61,10 @@ async def async_get_config_entry_diagnostics(
         "data_keys": list(coordinator.data.keys()) if isinstance(coordinator.data, dict) else None,
     }
 
-    # API client information (no sensitive data)
+    # API client information
     api_info = {
-        "base_endpoint": "https://jsonplaceholder.typicode.com",
-        "has_credentials": bool(client._username),  # noqa: SLF001
+        "base_endpoint": "https://www.panynj.gov/bin/portauthority/ridepath.json",
+        "requires_authentication": False,
     }
 
     # Integration information
